@@ -83,10 +83,13 @@ def test_upload_returns_200_with_invoice_fields():
 
     with patch("routers.invoices.DocumentConverter") as mock_dc, \
          patch("routers.invoices.LLMService") as mock_llm_cls, \
+         patch("routers.invoices.EmbeddingService") as mock_emb_cls, \
          patch("routers.invoices.supabase", _make_supabase_mock()):
 
         mock_dc.return_value.convert.return_value = mock_convert_result
         mock_llm_cls.return_value.extract_invoice.return_value = FIXTURE_INVOICE_DICT
+        mock_emb_cls.return_value.chunk_text.return_value = ["chunk1"]
+        mock_emb_cls.return_value.embed_chunks.return_value = [[0.1] * 1536]
 
         from main import app
         client = TestClient(app)

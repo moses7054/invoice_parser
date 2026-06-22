@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from db.client import supabase
+from services.embedding_service import EmbeddingService
 from services.llm_service import LLMService
 
 try:
@@ -79,6 +80,19 @@ def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
         item_record = {**item, "invoice_id": invoice_id}
         li_result = supabase.table("line_items").insert(item_record).execute()
         saved_line_items.append(li_result.data[0])
+
+    # Generate and store embeddings for semantic search
+    embedding_svc = EmbeddingService()
+    chunks = embedding_svc.chunk_text(raw_text)
+    embeddings = embedding_svc.embed_chunks(chunks, provider=llm_provider)
+    for chunk_text, embedding in zip(chunks, embeddings):
+        supabase.table("invoice_embeddings").insert(
+            {
+                "invoice_id": invoice_id,
+                "chunk_text": chunk_text,
+                "embedding": embedding,
+            }
+        ).execute()
 
     return JSONResponse(content={**saved_invoice, "line_items": saved_line_items})
 
