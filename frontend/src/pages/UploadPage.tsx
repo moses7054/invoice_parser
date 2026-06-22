@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useProvider } from '../context/ProviderContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -43,6 +44,7 @@ type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
 export default function UploadPage() {
   const navigate = useNavigate()
+  const { provider } = useProvider()
   const [uploadState, setUploadState] = useState<UploadState>('idle')
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [invoice, setInvoice] = useState<InvoiceResult | null>(null)
@@ -89,7 +91,7 @@ export default function UploadPage() {
 
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('llm_provider', 'anthropic')
+    formData.append('llm_provider', provider)
 
     try {
       const res = await fetch(`${API_URL}/invoices/upload`, {
@@ -120,7 +122,7 @@ export default function UploadPage() {
       const res = await fetch(`${API_URL}/invoices/upload-sample`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sample_filename: filename, llm_provider: 'anthropic' }),
+        body: JSON.stringify({ sample_filename: filename, llm_provider: provider }),
       })
 
       if (!res.ok) {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useProvider } from '../context/ProviderContext'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -10,6 +11,7 @@ interface QAResponse {
 }
 
 export default function QAPage() {
+  const { provider } = useProvider()
   const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<QAResponse | null>(null)
@@ -27,7 +29,7 @@ export default function QAPage() {
       const res = await fetch(`${API_URL}/qa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, llm_provider: 'anthropic' }),
+        body: JSON.stringify({ question, llm_provider: provider }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
