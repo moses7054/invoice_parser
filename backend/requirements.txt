@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+supabase
+docling
+anthropic
+openai
+voyageai
+numpy
+python-dotenv
+pydantic
+pytest
+httpx
