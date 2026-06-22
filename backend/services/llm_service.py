@@ -79,3 +79,63 @@ class LLMService:
         )
         raw_json = response.choices[0].message.content
         return json.loads(raw_json)
+
+    # ------------------------------------------------------------------
+    # Q&A helpers
+    # ------------------------------------------------------------------
+
+    def generate_sql(self, question: str, schema_context: str, provider: str = "anthropic") -> str:
+        """Ask the LLM to produce a safe SELECT-only SQL query for *question*.
+
+        Returns a raw SQL string.  Callers must validate it is a SELECT before
+        executing.
+        """
+        prompt = (
+            "You are a SQL expert.  Given the schema below, write a single "
+            "SELECT SQL query that answers the question.  "
+            "Return only the SQL statement — no markdown fences, no explanation.\n\n"
+            f"Schema:\n{schema_context}\n\n"
+            f"Question: {question}"
+        )
+        if provider == "anthropic":
+            return self._call_anthropic_text(prompt)
+        elif provider == "openai":
+            return self._call_openai_text(prompt)
+        else:
+            raise ValueError(f"Unsupported provider: {provider!r}")
+
+    def answer_question(self, question: str, context: str, provider: str = "anthropic") -> str:
+        """Synthesise a natural-language answer from *context* (JSON invoice data)."""
+        prompt = (
+            "You are a helpful assistant that answers questions about invoice data.\n\n"
+            f"Invoice data (JSON):\n{context}\n\n"
+            f"Question: {question}\n\n"
+            "Answer concisely and accurately based only on the data provided."
+        )
+        if provider == "anthropic":
+            return self._call_anthropic_text(prompt)
+        elif provider == "openai":
+            return self._call_openai_text(prompt)
+        else:
+            raise ValueError(f"Unsupported provider: {provider!r}")
+
+    def _call_anthropic_text(self, prompt: str) -> str:
+        import anthropic  # type: ignore
+
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return message.content[0].text
+
+    def _call_openai_text(self, prompt: str) -> str:
+        from openai import OpenAI  # type: ignore
+
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content

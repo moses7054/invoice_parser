@@ -1,0 +1,32 @@
+INVOICE
+
+Invoice Number: INV-2024-001
+Date: 2024-01-15
+Due Date: 2024-02-15
+
+FROM:
+TechCorp Solutions Ltd
+123 Innovation Drive
+San Francisco, CA 94105
+USA
+
+TO:
+Acme Corporation
+456 Business Ave
+New York, NY 10001
+USA
+
+LINE ITEMS:
+1. Software License - Enterprise Tier | Qty: 5 | Unit Price: $299.00 | Total: $1,495.00
+2. Technical Support (Annual)         | Qty: 1 | Unit Price: $500.00 | Total:   $500.00
+
+SUBTOTAL: $1,995.00
+TAX (8.5%): $169.58
+TOTAL DUE: $2,164.58 USD
+
+Payment Terms: Net 30
+Bank: Silicon Valley Bank
+Account: 1234-5678-90
+Routing: 021000021
+
+Thank you for your business!

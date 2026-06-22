@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -34,6 +34,11 @@ interface InvoiceResult {
   line_items?: LineItem[]
 }
 
+interface SampleInvoice {
+  filename: string
+  display_name: string
+}
+
 type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
 export default function UploadPage() {
@@ -42,6 +47,28 @@ export default function UploadPage() {
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [invoice, setInvoice] = useState<InvoiceResult | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [sampleInvoices, setSampleInvoices] = useState<SampleInvoice[]>([])
+  const [uploadingSample, setUploadingSample] = useState<string | null>(null)
+
+  // Fetch sample invoices on mount
+  useEffect(() => {
+    fetch(`${API_URL}/sample-invoices`)
+      .then((r) => r.json())
+      .then((data: SampleInvoice[]) => setSampleInvoices(data))
+      .catch(() => {/* silently ignore — samples are a convenience feature */})
+  }, [])
+
+  const handleInvoiceSuccess = useCallback(
+    (data: InvoiceResult) => {
+      if (data.id) {
+        navigate(`/invoices/${data.id}`)
+      } else {
+        setInvoice(data)
+        setUploadState('success')
+      }
+    },
+    [navigate],
+  )
 
   const processFile = useCallback(async (file: File) => {
     // Client-side validation
@@ -76,16 +103,40 @@ export default function UploadPage() {
       }
 
       const data: InvoiceResult = await res.json()
-      setInvoice(data)
-      setUploadState('success')
-      if (data.id) {
-        navigate(`/invoices/${data.id}`)
-      }
+      handleInvoiceSuccess(data)
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.')
       setUploadState('error')
     }
-  }, [])
+  }, [handleInvoiceSuccess])
+
+  const handleSampleUpload = useCallback(async (filename: string) => {
+    setUploadingSample(filename)
+    setUploadState('uploading')
+    setErrorMsg('')
+    setInvoice(null)
+
+    try {
+      const res = await fetch(`${API_URL}/invoices/upload-sample`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sample_filename: filename, llm_provider: 'anthropic' }),
+      })
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(errBody.detail ?? `HTTP ${res.status}`)
+      }
+
+      const data: InvoiceResult = await res.json()
+      handleInvoiceSuccess(data)
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Sample upload failed. Please try again.')
+      setUploadState('error')
+    } finally {
+      setUploadingSample(null)
+    }
+  }, [handleInvoiceSuccess])
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -149,6 +200,53 @@ export default function UploadPage() {
         </div>
       )}
 
+      {/* Sample invoices section */}
+      {uploadState !== 'success' && sampleInvoices.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: '#444', marginBottom: 12 }}>
+            Or try a sample invoice
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {sampleInvoices.map((sample) => (
+              <div
+                key={sample.filename}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 8,
+                  background: '#fff',
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 500 }}>{sample.display_name}</div>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{sample.filename}</div>
+                </div>
+                <button
+                  onClick={() => handleSampleUpload(sample.filename)}
+                  disabled={uploadState === 'uploading'}
+                  style={{
+                    padding: '6px 16px',
+                    cursor: uploadState === 'uploading' ? 'not-allowed' : 'pointer',
+                    borderRadius: 4,
+                    border: '1px solid #0066ff',
+                    background: uploadingSample === sample.filename ? '#e0edff' : '#fff',
+                    color: '#0066ff',
+                    fontWeight: 500,
+                    fontSize: 14,
+                    opacity: uploadState === 'uploading' ? 0.6 : 1,
+                  }}
+                >
+                  {uploadingSample === sample.filename ? 'Uploading…' : 'Use this sample'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Spinner */}
       {uploadState === 'uploading' && (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -183,7 +281,7 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* Success results */}
+      {/* Success results (fallback when navigation is not available) */}
       {uploadState === 'success' && invoice && (
         <div style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
