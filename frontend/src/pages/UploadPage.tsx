@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -36,6 +37,7 @@ interface InvoiceResult {
 type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
 export default function UploadPage() {
+  const navigate = useNavigate()
   const [uploadState, setUploadState] = useState<UploadState>('idle')
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [invoice, setInvoice] = useState<InvoiceResult | null>(null)
@@ -76,6 +78,9 @@ export default function UploadPage() {
       const data: InvoiceResult = await res.json()
       setInvoice(data)
       setUploadState('success')
+      if (data.id) {
+        navigate(`/invoices/${data.id}`)
+      }
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.')
       setUploadState('error')

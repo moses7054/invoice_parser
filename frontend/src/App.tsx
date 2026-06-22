@@ -1,16 +1,10 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import UploadPage from './pages/UploadPage'
+import InvoiceListPage from './pages/InvoiceListPage'
+import InvoiceDetailPage from './pages/InvoiceDetailPage'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-
-function InvoicesPage() {
-  return <div><h1>Invoices</h1><p>Invoice list coming soon.</p></div>
-}
-
-function InvoiceDetailPage() {
-  return <div><h1>Invoice Detail</h1><p>Invoice detail coming soon.</p></div>
-}
 
 function App() {
   useEffect(() => {
@@ -23,7 +17,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<UploadPage />} />
-      <Route path="/invoices" element={<InvoicesPage />} />
+      <Route path="/invoices" element={<InvoiceListPage />} />
       <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
     </Routes>
   )

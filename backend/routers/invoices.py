@@ -21,6 +21,53 @@ except ImportError:  # pragma: no cover – docling may not be installed in test
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@router.get("")
+def list_invoices():
+    """Return all invoices ordered by created_at descending."""
+    if supabase is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable — SUPABASE_URL / SUPABASE_KEY not configured.",
+        )
+    result = (
+        supabase.table("invoices")
+        .select("id, vendor_name, invoice_date, total_amount, currency, llm_provider, created_at")
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return result.data
+
+
+@router.get("/{invoice_id}")
+def get_invoice(invoice_id: str):
+    """Return a single invoice with its line items. 404 if not found."""
+    if supabase is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable — SUPABASE_URL / SUPABASE_KEY not configured.",
+        )
+    invoice_result = (
+        supabase.table("invoices")
+        .select("*")
+        .eq("id", invoice_id)
+        .execute()
+    )
+    if not invoice_result.data:
+        raise HTTPException(status_code=404, detail="Invoice not found.")
+
+    invoice = invoice_result.data[0]
+
+    line_items_result = (
+        supabase.table("line_items")
+        .select("*")
+        .eq("invoice_id", invoice_id)
+        .execute()
+    )
+    invoice["line_items"] = line_items_result.data
+
+    return invoice
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "image/jpeg",
