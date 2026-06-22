@@ -1,11 +1,8 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import UploadPage from './pages/UploadPage'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-
-function UploadPage() {
-  return <div><h1>Upload Invoice</h1><p>Upload functionality coming soon.</p></div>
-}
 
 function InvoicesPage() {
   return <div><h1>Invoices</h1><p>Invoice list coming soon.</p></div>

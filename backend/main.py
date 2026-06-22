@@ -14,6 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from routers.invoices import router as invoices_router  # noqa: E402
+app.include_router(invoices_router)
+
 
 @app.get("/health")
 def health():
