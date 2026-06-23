@@ -12,63 +12,75 @@ interface InvoiceSummary {
   llm_provider?: string
 }
 
+function providerLabel(p?: string) {
+  if (!p) return '—'
+  if (p.includes('anthropic') || p.includes('claude')) return 'Claude'
+  if (p.includes('openai') || p.includes('gpt')) return 'GPT-4o'
+  return p
+}
+
+function ProviderBadge({ provider }: { provider?: string }) {
+  const label = providerLabel(provider)
+  const cls =
+    label === 'Claude'
+      ? 'bg-blue-100 text-blue-700'
+      : label === 'GPT-4o'
+      ? 'bg-green-100 text-green-700'
+      : 'bg-slate-100 text-slate-600'
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>
+      {label}
+    </span>
+  )
+}
+
 export default function InvoiceListPage() {
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
     fetch(`${API_URL}/invoices`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then((data: InvoiceSummary[]) => {
-        setInvoices(data)
-        setLoading(false)
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Failed to load invoices.')
-        setLoading(false)
-      })
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+      .then((data: InvoiceSummary[]) => { setInvoices(data); setLoading(false) })
+      .catch((err: unknown) => { setError(err instanceof Error ? err.message : 'Failed to load.'); setLoading(false) })
   }, [])
 
-  const providerLabel = (provider?: string) => {
-    if (!provider) return '—'
-    if (provider.toLowerCase().includes('anthropic') || provider.toLowerCase().includes('claude')) return 'Claude'
-    if (provider.toLowerCase().includes('openai') || provider.toLowerCase().includes('gpt')) return 'GPT-4o'
-    return provider
-  }
-
   return (
-    <div style={{ maxWidth: 900, margin: '40px auto', fontFamily: 'system-ui, sans-serif', padding: '0 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ margin: 0 }}>Invoices</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Invoices</h1>
+          <p className="text-slate-500 mt-1">{invoices.length} invoice{invoices.length !== 1 ? 's' : ''} processed</p>
+        </div>
         <button
           onClick={() => navigate('/')}
-          style={{ padding: '8px 18px', cursor: 'pointer', borderRadius: 4, border: '1px solid #ccc', background: '#fff' }}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Upload New
+          + Upload New
         </button>
       </div>
 
       {loading && (
-        <p style={{ color: '#666' }}>Loading…</p>
-      )}
-
-      {error && (
-        <div style={{ padding: '16px 20px', background: '#fff0f0', border: '1px solid #ffcccc', borderRadius: 8, color: '#cc0000' }}>
-          {error}
+        <div className="flex items-center gap-3 text-slate-500 py-8">
+          <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+          Loading invoices…
         </div>
       )}
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{error}</div>
+      )}
+
       {!loading && !error && invoices.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#666' }}>
-          <p style={{ fontSize: 16 }}>No invoices yet. Upload one to get started.</p>
+        <div className="text-center py-16 bg-white border border-slate-200 rounded-xl">
+          <div className="text-4xl mb-3">📭</div>
+          <p className="text-slate-600 font-medium">No invoices yet</p>
+          <p className="text-slate-400 text-sm mt-1">Upload your first invoice to get started</p>
           <button
             onClick={() => navigate('/')}
-            style={{ marginTop: 12, padding: '8px 20px', cursor: 'pointer', borderRadius: 4, border: '1px solid #0066ff', color: '#0066ff', background: '#fff' }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
           >
             Upload Invoice
           </button>
@@ -76,37 +88,38 @@ export default function InvoiceListPage() {
       )}
 
       {!loading && !error && invoices.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ background: '#f5f5f5' }}>
-              {['Vendor', 'Date', 'Total', 'Currency', 'LLM Provider'].map((h) => (
-                <th
-                  key={h}
-                  style={{ padding: '10px 14px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: 600 }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr
-                key={inv.id}
-                onClick={() => navigate(`/invoices/${inv.id}`)}
-                style={{ borderBottom: '1px solid #eee', cursor: 'pointer' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#f9f9f9')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-              >
-                <td style={{ padding: '10px 14px' }}>{inv.vendor_name ?? '—'}</td>
-                <td style={{ padding: '10px 14px' }}>{inv.invoice_date ?? '—'}</td>
-                <td style={{ padding: '10px 14px' }}>{inv.total_amount != null ? inv.total_amount.toLocaleString() : '—'}</td>
-                <td style={{ padding: '10px 14px' }}>{inv.currency ?? '—'}</td>
-                <td style={{ padding: '10px 14px' }}>{providerLabel(inv.llm_provider)}</td>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-left text-slate-500 font-medium">
+                <th className="px-4 py-3">Vendor</th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Total</th>
+                <th className="px-4 py-3">Currency</th>
+                <th className="px-4 py-3">Model</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {invoices.map((inv) => (
+                <tr
+                  key={inv.id}
+                  onClick={() => navigate(`/invoices/${inv.id}`)}
+                  className="hover:bg-slate-50 cursor-pointer transition-colors"
+                >
+                  <td className="px-4 py-3 font-medium text-slate-900">{inv.vendor_name ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{inv.invoice_date ?? '—'}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-800">
+                    {inv.total_amount != null ? inv.total_amount.toLocaleString() : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{inv.currency ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <ProviderBadge provider={inv.llm_provider} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

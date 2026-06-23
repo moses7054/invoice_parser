@@ -10,6 +10,13 @@ interface QAResponse {
   sources: string[]
 }
 
+const EXAMPLE_QUESTIONS = [
+  'What is the total amount across all invoices?',
+  'How many invoices are in EUR?',
+  'Find invoices related to construction services',
+  'Show me invoices mentioning VAT',
+]
+
 export default function QAPage() {
   const { provider } = useProvider()
   const [question, setQuestion] = useState('')
@@ -17,26 +24,23 @@ export default function QAPage() {
   const [result, setResult] = useState<QAResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!question.trim()) return
-
+  async function handleSubmit(q: string) {
+    if (!q.trim()) return
+    setQuestion(q)
     setLoading(true)
     setResult(null)
     setError(null)
-
     try {
       const res = await fetch(`${API_URL}/qa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, llm_provider: provider }),
+        body: JSON.stringify({ question: q, llm_provider: provider }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.detail ?? `Request failed: ${res.status}`)
       }
-      const data: QAResponse = await res.json()
-      setResult(data)
+      setResult(await res.json())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -45,136 +49,113 @@ export default function QAPage() {
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1 style={{ marginBottom: '1.5rem' }}>Invoice Q&amp;A</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Invoice Q&A</h1>
+        <p className="text-slate-500 mt-1">Ask anything about your invoices — structured or semantic questions.</p>
+      </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+      {/* Input */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); handleSubmit(question) }}
+        className="flex gap-2"
+      >
         <input
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask a question about your invoices…"
-          style={{
-            flex: 1,
-            padding: '0.625rem 0.75rem',
-            fontSize: '1rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.375rem',
-          }}
+          className="flex-1 px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
         />
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          style={{
-            padding: '0.625rem 1.25rem',
-            fontSize: '1rem',
-            background: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '0.375rem',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading || !question.trim() ? 0.6 : 1,
-          }}
+          className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Thinking…' : 'Ask'}
         </button>
       </form>
 
-      {loading && (
-        <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
-          <span
-            style={{
-              display: 'inline-block',
-              width: 32,
-              height: 32,
-              border: '3px solid #e5e7eb',
-              borderTop: '3px solid #2563eb',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ marginTop: '0.75rem' }}>Analysing invoices…</p>
-        </div>
-      )}
-
-      {error && (
-        <div
-          style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '0.375rem',
-            padding: '1rem',
-            color: '#dc2626',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {result && (
+      {/* Example questions */}
+      {!result && !loading && (
         <div>
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">Try an example</p>
+          <div className="flex flex-wrap gap-2">
+            {EXAMPLE_QUESTIONS.map((q) => (
+              <button
+                key={q}
+                onClick={() => handleSubmit(q)}
+                className="px-3 py-1.5 text-sm bg-white border border-slate-200 text-slate-600 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-colors"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spinner */}
+      {loading && (
+        <div className="flex flex-col items-center py-12 text-slate-500">
+          <div className="w-8 h-8 border-3 border-slate-200 border-t-blue-500 rounded-full animate-spin mb-3" />
+          <p className="text-sm">Analysing invoices…</p>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>
+      )}
+
+      {/* Result */}
+      {result && (
+        <div className="space-y-3">
           {/* Mode badge */}
-          <span
-            style={{
-              display: 'inline-block',
-              padding: '0.25rem 0.625rem',
-              borderRadius: '9999px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              marginBottom: '0.75rem',
-              background: result.mode === 'sql' ? '#dbeafe' : '#ede9fe',
-              color: result.mode === 'sql' ? '#1d4ed8' : '#7c3aed',
-            }}
-          >
-            {result.mode === 'sql' ? 'SQL' : 'Vector'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                result.mode === 'sql'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-violet-100 text-violet-700'
+              }`}
+            >
+              {result.mode === 'sql' ? '🗄 SQL' : '🔍 Vector'}
+            </span>
+            <span className="text-xs text-slate-400">
+              {result.mode === 'sql' ? 'Answered using structured data' : 'Answered using semantic search'}
+            </span>
+          </div>
 
           {/* Answer */}
-          <div
-            style={{
-              background: '#f9fafb',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-              padding: '1rem 1.25rem',
-              fontSize: '1rem',
-              lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
-              marginBottom: '1.25rem',
-            }}
-          >
-            {result.answer}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+            <p className="text-slate-800 leading-relaxed whitespace-pre-wrap">{result.answer}</p>
           </div>
 
           {/* Sources */}
           {result.sources.length > 0 && (
             <div>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
-                Sources
-              </h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">Sources</p>
+              <div className="flex flex-wrap gap-2">
                 {result.sources.map((id) => (
-                  <li key={id}>
-                    <Link
-                      to={`/invoices/${id}`}
-                      style={{
-                        display: 'inline-block',
-                        padding: '0.25rem 0.625rem',
-                        background: '#eff6ff',
-                        border: '1px solid #bfdbfe',
-                        borderRadius: '0.375rem',
-                        color: '#1d4ed8',
-                        fontSize: '0.8125rem',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {id}
-                    </Link>
-                  </li>
+                  <Link
+                    key={id}
+                    to={`/invoices/${id}`}
+                    className="px-3 py-1 bg-white border border-slate-200 text-blue-600 text-xs rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors font-mono"
+                  >
+                    {id.slice(0, 8)}…
+                  </Link>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
+
+          {/* Ask another */}
+          <button
+            onClick={() => { setResult(null); setQuestion('') }}
+            className="text-sm text-slate-400 hover:text-slate-600 underline"
+          >
+            Ask another question
+          </button>
         </div>
       )}
     </div>

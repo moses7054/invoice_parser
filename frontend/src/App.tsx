@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, NavLink } from 'react-router-dom'
 import UploadPage from './pages/UploadPage'
 import InvoiceListPage from './pages/InvoiceListPage'
 import InvoiceDetailPage from './pages/InvoiceDetailPage'
@@ -12,48 +12,46 @@ function AppHeader() {
   const { provider, setProvider } = useProvider()
 
   return (
-    <header
-      style={{
-        padding: '0.75rem 1.25rem',
-        borderBottom: '1px solid #e5e7eb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: '#fff',
-      }}
-    >
-      {/* Left: app name + nav links */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#111' }}>Invoice Parser</span>
-        <nav style={{ display: 'flex', gap: '1rem' }}>
-          <Link to="/" style={{ textDecoration: 'none', color: '#1d4ed8' }}>Upload</Link>
-          <Link to="/invoices" style={{ textDecoration: 'none', color: '#1d4ed8' }}>Invoices</Link>
-          <Link to="/qa" style={{ textDecoration: 'none', color: '#1d4ed8' }}>Q&amp;A</Link>
+    <header className="bg-slate-900 text-white px-6 py-3 flex items-center justify-between shadow-md">
+      <div className="flex items-center gap-8">
+        <span className="font-bold text-lg tracking-tight text-white">
+          📄 Invoice Parser
+        </span>
+        <nav className="flex gap-1">
+          {[
+            { to: '/', label: 'Upload' },
+            { to: '/invoices', label: 'Invoices' },
+            { to: '/qa', label: 'Q&A' },
+          ].map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
         </nav>
       </div>
 
-      {/* Right: LLM provider dropdown */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <label
-          htmlFor="provider-select"
-          style={{ fontSize: '0.875rem', color: '#374151', fontWeight: 500 }}
-        >
-          LLM Provider:
+      <div className="flex items-center gap-2">
+        <label htmlFor="provider-select" className="text-sm text-slate-400 font-medium">
+          Model:
         </label>
         <select
           id="provider-select"
           value={provider}
           onChange={(e) => setProvider(e.target.value as 'anthropic' | 'openai')}
-          style={{
-            padding: '0.375rem 0.625rem',
-            fontSize: '0.875rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.375rem',
-            background: '#f9fafb',
-            cursor: 'pointer',
-          }}
+          className="text-sm bg-slate-800 border border-slate-600 text-white rounded-md px-2 py-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="anthropic">Claude (claude-sonnet-4-6)</option>
+          <option value="anthropic">Claude (Sonnet 4.6)</option>
           <option value="openai">GPT-4o</option>
         </select>
       </div>
@@ -65,20 +63,22 @@ function AppInner() {
   useEffect(() => {
     fetch(`${API_URL}/health`)
       .then((res) => res.json())
-      .then((data) => console.log('[health check]', data))
-      .catch((err) => console.warn('[health check failed]', err))
+      .then((data) => console.log('[health]', data))
+      .catch((err) => console.warn('[health failed]', err))
   }, [])
 
   return (
-    <>
+    <div className="min-h-screen bg-slate-50">
       <AppHeader />
-      <Routes>
-        <Route path="/" element={<UploadPage />} />
-        <Route path="/invoices" element={<InvoiceListPage />} />
-        <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
-        <Route path="/qa" element={<QAPage />} />
-      </Routes>
-    </>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <Routes>
+          <Route path="/" element={<UploadPage />} />
+          <Route path="/invoices" element={<InvoiceListPage />} />
+          <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+          <Route path="/qa" element={<QAPage />} />
+        </Routes>
+      </main>
+    </div>
   )
 }
 
