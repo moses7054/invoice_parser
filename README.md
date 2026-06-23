@@ -18,10 +18,10 @@ Built as a production blueprint for the SAP BTP / Azure OpenAI / HANA Cloud stac
 |---|---|
 | Backend | Python + FastAPI |
 | Frontend | Vite + React + TypeScript |
-| Document parsing | Docling (IBM Research) |
+| Document parsing | pdfplumber (PDF) + pytesseract (images) |
 | LLM providers | Anthropic Claude, OpenAI GPT-4o |
 | Database | Supabase (PostgreSQL + pgvector) |
-| Deployment | Vercel (frontend) + Render (backend) |
+| Deployment | Vercel (frontend) + Railway (backend) |
 
 ## Run Locally
 
@@ -75,16 +75,16 @@ Built as a production blueprint for the SAP BTP / Azure OpenAI / HANA Cloud stac
 
 ## Deploy
 
-### Backend (Render)
-1. Create a new Web Service in Render, connect this repo, set root directory to `backend/`
-2. Build command: `pip install -r requirements.txt`
-3. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Health check path: `/health`
-5. Add env vars: `SUPABASE_URL`, `SUPABASE_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+### Backend (Railway)
+1. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo
+2. Select this repo, set **Root Directory** to `backend/`
+3. Railway auto-detects Python and uses `nixpacks.toml` to install `tesseract` for image OCR
+4. Add env vars: `SUPABASE_URL`, `SUPABASE_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+5. Under Settings → Networking → Generate Domain to get your public URL
 
 ### Frontend (Vercel)
 1. Import this repo in Vercel, set root directory to `frontend/`
-2. Add env var: `VITE_API_URL=<your Render backend URL>`
+2. Add env var: `VITE_API_URL=<your Railway backend URL>`
 3. Deploy — Vercel auto-detects Vite
 
 ## SAP Production Mapping
