@@ -105,6 +105,65 @@ def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
 
 
 # ---------------------------------------------------------------------------
+# POST /invoices/upload — file upload  (must be before /{invoice_id} wildcard)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/upload")
+async def upload_invoice(
+    file: UploadFile,
+    llm_provider: Optional[str] = Form(default="anthropic"),
+):
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{content_type}'. Allowed: PDF, JPEG, PNG.",
+        )
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large ({len(file_bytes)} bytes). Maximum allowed is 10 MB.",
+        )
+    suffix = _mime_to_suffix(content_type)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
+    try:
+        return _run_pipeline(tmp_path, llm_provider or "anthropic")
+    finally:
+        os.unlink(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# POST /invoices/upload-sample — one-click demo (must be before /{invoice_id})
+# ---------------------------------------------------------------------------
+
+
+class SampleUploadRequest(BaseModel):
+    sample_filename: str
+    llm_provider: str = "anthropic"
+
+
+@router.post("/upload-sample")
+def upload_sample_invoice(body: SampleUploadRequest):
+    filename = body.sample_filename
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename. Path traversal is not allowed.")
+    target = (SAMPLE_DIR / filename).resolve()
+    try:
+        target.relative_to(SAMPLE_DIR.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid filename. Path traversal is not allowed.")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=f"Sample file '{filename}' not found.")
+    if target.suffix.lower() not in ALLOWED_SAMPLE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported sample file type '{target.suffix}'.")
+    return _run_pipeline(str(target), body.llm_provider)
+
+
+# ---------------------------------------------------------------------------
 # GET /invoices — list all invoices
 # ---------------------------------------------------------------------------
 
@@ -161,96 +220,3 @@ def get_invoice(invoice_id: str):
     return invoice
 
 
-# ---------------------------------------------------------------------------
-# POST /invoices/upload — file upload
-# ---------------------------------------------------------------------------
-
-
-@router.post("/upload")
-async def upload_invoice(
-    file: UploadFile,
-    llm_provider: Optional[str] = Form(default="anthropic"),
-):
-    """
-    Upload an invoice file (PDF or image), extract data with Docling + LLM,
-    store to Supabase, and return the structured invoice record.
-    """
-    content_type = file.content_type or ""
-    if content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type '{content_type}'. Allowed: PDF, JPEG, PNG.",
-        )
-
-    file_bytes = await file.read()
-    if len(file_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File too large ({len(file_bytes)} bytes). Maximum allowed is 10 MB.",
-        )
-
-    suffix = _mime_to_suffix(content_type)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(file_bytes)
-        tmp_path = tmp.name
-
-    try:
-        return _run_pipeline(tmp_path, llm_provider or "anthropic")
-    finally:
-        os.unlink(tmp_path)
-
-
-# ---------------------------------------------------------------------------
-# GET /sample-invoices — list bundled sample files (note: NOT under /invoices prefix)
-# ---------------------------------------------------------------------------
-
-# This route is registered at the app level (not inside /invoices prefix).
-# We expose it via a separate small router so it lives at /sample-invoices.
-
-
-# ---------------------------------------------------------------------------
-# POST /invoices/upload-sample — one-click demo with a bundled file
-# ---------------------------------------------------------------------------
-
-
-class SampleUploadRequest(BaseModel):
-    sample_filename: str
-    llm_provider: str = "anthropic"
-
-
-@router.post("/upload-sample")
-def upload_sample_invoice(body: SampleUploadRequest):
-    """
-    Run the full invoice pipeline on one of the bundled sample files.
-    Validates that the filename doesn't escape the sample_invoices/ directory.
-    """
-    filename = body.sample_filename
-
-    # Path traversal protection: reject filenames with separators or parent-dir refs
-    if "/" in filename or "\\" in filename or ".." in filename:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid filename. Path traversal is not allowed.",
-        )
-
-    target = (SAMPLE_DIR / filename).resolve()
-
-    # Double-check resolved path stays inside SAMPLE_DIR
-    try:
-        target.relative_to(SAMPLE_DIR.resolve())
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid filename. Path traversal is not allowed.",
-        )
-
-    if not target.exists():
-        raise HTTPException(status_code=404, detail=f"Sample file '{filename}' not found.")
-
-    if target.suffix.lower() not in ALLOWED_SAMPLE_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported sample file type '{target.suffix}'.",
-        )
-
-    return _run_pipeline(str(target), body.llm_provider)
