@@ -59,6 +59,27 @@ def _extract_text(file_path: str) -> str:
         return pytesseract.image_to_string(Image.open(file_path))
 
 
+# Control chars (incl. NUL) are rejected by PostgreSQL and break the HTTP/2
+# stream to Supabase. Strip everything below 0x20 except tab/newline/return.
+_CONTROL_CHARS = {c for c in range(0x20)} - {0x09, 0x0A, 0x0D}
+_CONTROL_TABLE = {c: None for c in _CONTROL_CHARS} | {0x00: None}
+
+
+def _sanitize(value):
+    """Recursively strip NUL/control chars from strings and drop NaN/Inf floats."""
+    import math
+
+    if isinstance(value, str):
+        return value.translate(_CONTROL_TABLE)
+    if isinstance(value, float):
+        return None if (math.isnan(value) or math.isinf(value)) else value
+    if isinstance(value, dict):
+        return {k: _sanitize(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_sanitize(v) for v in value]
+    return value
+
+
 def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
     """Shared pipeline: parse text → LLM extract → Supabase store → return JSON."""
     raw_text = _extract_text(file_path)
@@ -66,11 +87,11 @@ def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
     extracted: dict = LLMService().extract_invoice(raw_text, provider=llm_provider)
     line_items_data: list = extracted.pop("line_items", [])
 
-    invoice_record = {
+    invoice_record = _sanitize({
         **extracted,
         "raw_text": raw_text,
         "llm_provider": llm_provider,
-    }
+    })
 
     if supabase is None:
         raise HTTPException(
@@ -84,7 +105,7 @@ def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
 
     saved_line_items = []
     for item in line_items_data:
-        item_record = {**item, "invoice_id": invoice_id}
+        item_record = _sanitize({**item, "invoice_id": invoice_id})
         li_result = supabase.table("line_items").insert(item_record).execute()
         saved_line_items.append(li_result.data[0])
 
@@ -96,7 +117,7 @@ def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
         supabase.table("invoice_embeddings").insert(
             {
                 "invoice_id": invoice_id,
-                "chunk_text": chunk_text,
+                "chunk_text": _sanitize(chunk_text),
                 "embedding": embedding,
             }
         ).execute()
