@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Send, Database, Search, ExternalLink, Loader2, Bot, User } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { useProvider } from '../context/ProviderContext'
 import { API_URL } from '../api/config'
 
@@ -112,7 +113,18 @@ export default function QAPage() {
                         : <><Search size={11} /> Vector · Semantic search</>}
                     </div>
                   )}
-                  <div className="px-4 py-3 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                  <div className="px-4 py-3 text-sm text-slate-800 leading-relaxed space-y-2
+                    [&_p]:my-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
+                    [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
+                    [&_strong]:font-semibold [&_strong]:text-slate-900
+                    [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs
+                    [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold
+                    [&_a]:text-indigo-600 [&_a]:underline
+                    [&_table]:w-full [&_table]:text-xs [&_th]:text-left [&_th]:font-semibold
+                    [&_th]:border-b [&_th]:border-slate-200 [&_th]:py-1
+                    [&_td]:border-b [&_td]:border-slate-100 [&_td]:py-1 [&_td]:pr-3">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
                   {msg.sources && msg.sources.length > 0 && (
                     <div className="px-4 pb-3 flex flex-wrap gap-1.5">
                       <span className="text-xs text-slate-400 mr-1 self-center">Sources:</span>
