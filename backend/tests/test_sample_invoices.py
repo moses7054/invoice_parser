@@ -126,15 +126,11 @@ def test_upload_sample_valid_file_returns_200():
     from main import app
     from fastapi.testclient import TestClient
 
-    mock_convert_result = MagicMock()
-    mock_convert_result.document.export_to_markdown.return_value = "# Invoice\nINV-2024-001"
-
-    with patch("routers.invoices.DocumentConverter") as mock_dc, \
+    with patch("routers.invoices._extract_text", return_value="# Invoice\nINV-2024-001"), \
          patch("routers.invoices.LLMService") as mock_llm_cls, \
          patch("routers.invoices.EmbeddingService") as mock_emb_cls, \
          patch("routers.invoices.supabase", _make_supabase_mock()):
 
-        mock_dc.return_value.convert.return_value = mock_convert_result
         mock_llm_cls.return_value.extract_invoice.return_value = FIXTURE_INVOICE_DICT.copy()
         mock_emb_cls.return_value.chunk_text.return_value = ["chunk1"]
         mock_emb_cls.return_value.embed_chunks.return_value = [[0.1] * 1536]
@@ -157,15 +153,11 @@ def test_upload_sample_response_has_invoice_fields():
     from main import app
     from fastapi.testclient import TestClient
 
-    mock_convert_result = MagicMock()
-    mock_convert_result.document.export_to_markdown.return_value = "# Invoice"
-
-    with patch("routers.invoices.DocumentConverter") as mock_dc, \
+    with patch("routers.invoices._extract_text", return_value="# Invoice"), \
          patch("routers.invoices.LLMService") as mock_llm_cls, \
          patch("routers.invoices.EmbeddingService") as mock_emb_cls, \
          patch("routers.invoices.supabase", _make_supabase_mock()):
 
-        mock_dc.return_value.convert.return_value = mock_convert_result
         mock_llm_cls.return_value.extract_invoice.return_value = FIXTURE_INVOICE_DICT.copy()
         mock_emb_cls.return_value.chunk_text.return_value = ["chunk1"]
         mock_emb_cls.return_value.embed_chunks.return_value = [[0.1] * 1536]

@@ -1,5 +1,5 @@
 """
-POST /invoices/upload — receive an invoice file, parse it with Docling,
+POST /invoices/upload — receive an invoice file, parse it with pdfplumber/Pillow+pytesseract,
 extract structured data via LLM, persist to Supabase, and return the result.
 GET  /sample-invoices — list available sample invoice files.
 POST /invoices/upload-sample — run the full pipeline on a bundled sample file.
@@ -16,11 +16,6 @@ from pydantic import BaseModel
 from db.client import supabase
 from services.embedding_service import EmbeddingService
 from services.llm_service import LLMService
-
-try:
-    from docling.document_converter import DocumentConverter  # type: ignore
-except ImportError:  # pragma: no cover – docling may not be installed in test env
-    DocumentConverter = None  # type: ignore[assignment,misc]
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -50,11 +45,23 @@ def _mime_to_suffix(mime_type: str) -> str:
     return mapping.get(mime_type, ".bin")
 
 
+def _extract_text(file_path: str) -> str:
+    """Extract plain text from a PDF or image file."""
+    path = Path(file_path)
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        import pdfplumber
+        with pdfplumber.open(file_path) as pdf:
+            return "\n\n".join(page.extract_text() or "" for page in pdf.pages)
+    else:
+        from PIL import Image
+        import pytesseract
+        return pytesseract.image_to_string(Image.open(file_path))
+
+
 def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
-    """Shared pipeline: Docling parse → LLM extract → Supabase store → return JSON."""
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
-    raw_text = result.document.export_to_markdown()
+    """Shared pipeline: parse text → LLM extract → Supabase store → return JSON."""
+    raw_text = _extract_text(file_path)
 
     extracted: dict = LLMService().extract_invoice(raw_text, provider=llm_provider)
     line_items_data: list = extracted.pop("line_items", [])
