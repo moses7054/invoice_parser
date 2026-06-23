@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -33,52 +33,32 @@ interface Invoice {
   line_items?: LineItem[]
 }
 
-function providerBadge(provider?: string) {
+function ProviderBadge({ provider }: { provider?: string }) {
   if (!provider) return null
-  const label =
-    provider.toLowerCase().includes('anthropic') || provider.toLowerCase().includes('claude')
-      ? 'Claude'
-      : provider.toLowerCase().includes('openai') || provider.toLowerCase().includes('gpt')
-      ? 'GPT-4o'
-      : provider
-
-  const bg = label === 'Claude' ? '#d4e8ff' : label === 'GPT-4o' ? '#d4f7d4' : '#eee'
-  const color = label === 'Claude' ? '#0044aa' : label === 'GPT-4o' ? '#006600' : '#333'
-
+  const isAnthropic = provider.includes('anthropic') || provider.includes('claude')
+  const label = isAnthropic ? 'Claude' : 'GPT-4o'
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '2px 10px',
-        borderRadius: 12,
-        background: bg,
-        color,
-        fontWeight: 600,
-        fontSize: 13,
-      }}
-    >
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isAnthropic ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
       {label}
     </span>
   )
 }
 
-function Field({ label, value }: { label: string; value?: string | number | null }) {
-  if (value == null || value === '') return null
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', marginBottom: 8, gap: 8 }}>
-      <span style={{ color: '#666', minWidth: 180, flexShrink: 0 }}>{label}:</span>
-      <span>{String(value)}</span>
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 font-semibold text-sm text-slate-700">{title}</div>
+      <div className="px-4 py-3 space-y-2">{children}</div>
     </div>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Field({ label, value, bold }: { label: string; value?: string | number | null; bold?: boolean }) {
+  if (value == null || value === '') return null
   return (
-    <div style={{ marginBottom: 24, border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden' }}>
-      <div style={{ background: '#f5f5f5', padding: '10px 16px', fontWeight: 600, borderBottom: '1px solid #e0e0e0' }}>
-        {title}
-      </div>
-      <div style={{ padding: 16 }}>{children}</div>
+    <div className="flex gap-3 text-sm">
+      <span className="text-slate-400 w-40 shrink-0">{label}</span>
+      <span className={bold ? 'font-bold text-slate-900 text-base' : 'text-slate-700'}>{String(value)}</span>
     </div>
   )
 }
@@ -86,27 +66,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Collapsible({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   return (
-    <div style={{ marginBottom: 24, border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden' }}>
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          background: '#f5f5f5',
-          padding: '10px 16px',
-          fontWeight: 600,
-          borderBottom: open ? '1px solid #e0e0e0' : 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 14,
-        }}
+        className="w-full flex justify-between items-center bg-slate-50 border-b border-slate-200 px-4 py-2.5 font-semibold text-sm text-slate-700 hover:bg-slate-100 transition-colors"
       >
         <span>{title}</span>
-        <span>{open ? '▲' : '▼'}</span>
+        <span className="text-slate-400">{open ? '▲' : '▼'}</span>
       </button>
-      {open && <div style={{ padding: 16 }}>{children}</div>}
+      {open && <div className="px-4 py-3">{children}</div>}
     </div>
   )
 }
@@ -116,110 +84,120 @@ export default function InvoiceDetailPage() {
   const navigate = useNavigate()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!id) return
     fetch(`${API_URL}/invoices/${id}`)
-      .then((res) => {
-        if (res.status === 404) throw new Error('Invoice not found.')
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then((data: Invoice) => {
-        setInvoice(data)
-        setLoading(false)
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Failed to load invoice.')
-        setLoading(false)
-      })
+      .then((r) => { if (r.status === 404) throw new Error('Invoice not found.'); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+      .then((data: Invoice) => { setInvoice(data); setLoading(false) })
+      .catch((err: unknown) => { setError(err instanceof Error ? err.message : 'Failed to load.'); setLoading(false) })
   }, [id])
 
   return (
-    <div style={{ maxWidth: 900, margin: '40px auto', fontFamily: 'system-ui, sans-serif', padding: '0 16px' }}>
+    <div className="space-y-5">
       <button
         onClick={() => navigate('/invoices')}
-        style={{ marginBottom: 24, padding: '6px 14px', cursor: 'pointer', borderRadius: 4, border: '1px solid #ccc', background: '#fff' }}
+        className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors"
       >
         ← Back to Invoices
       </button>
 
-      {loading && <p style={{ color: '#666' }}>Loading…</p>}
+      {loading && (
+        <div className="flex items-center gap-3 text-slate-500 py-8">
+          <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+          Loading invoice…
+        </div>
+      )}
 
       {error && (
-        <div style={{ padding: '16px 20px', background: '#fff0f0', border: '1px solid #ffcccc', borderRadius: 8, color: '#cc0000' }}>
-          {error}
-        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{error}</div>
       )}
 
       {!loading && !error && invoice && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <h1 style={{ margin: 0 }}>Invoice {invoice.invoice_number ?? invoice.id}</h1>
-            {providerBadge(invoice.llm_provider)}
+          {/* Header */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm px-6 py-5 flex justify-between items-start">
+            <div>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Invoice</p>
+              <h1 className="text-2xl font-bold text-slate-900">{invoice.invoice_number ?? invoice.id}</h1>
+              <p className="text-slate-500 mt-1">{invoice.vendor_name}</p>
+            </div>
+            <div className="text-right flex flex-col items-end gap-2">
+              <ProviderBadge provider={invoice.llm_provider} />
+              {invoice.total_amount != null && (
+                <div>
+                  <p className="text-xs text-slate-400">Total</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {invoice.currency} {invoice.total_amount.toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <Section title="Vendor Information">
-            <Field label="Vendor Name" value={invoice.vendor_name} />
-            <Field label="Vendor Address" value={invoice.vendor_address} />
-            <Field label="Bill To" value={invoice.bill_to} />
-          </Section>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Card title="Vendor Information">
+              <Field label="Vendor Name" value={invoice.vendor_name} />
+              <Field label="Vendor Address" value={invoice.vendor_address} />
+              <Field label="Bill To" value={invoice.bill_to} />
+            </Card>
+            <Card title="Invoice Details">
+              <Field label="Invoice Number" value={invoice.invoice_number} />
+              <Field label="PO Number" value={invoice.purchase_order_number} />
+              <Field label="Invoice Date" value={invoice.invoice_date} />
+              <Field label="Due Date" value={invoice.due_date} />
+              <Field label="Payment Terms" value={invoice.payment_terms} />
+            </Card>
+          </div>
 
-          <Section title="Invoice Details">
-            <Field label="Invoice Number" value={invoice.invoice_number} />
-            <Field label="PO Number" value={invoice.purchase_order_number} />
-            <Field label="Invoice Date" value={invoice.invoice_date} />
-            <Field label="Due Date" value={invoice.due_date} />
-            <Field label="Payment Terms" value={invoice.payment_terms} />
-          </Section>
-
-          <Section title="Amounts">
+          <Card title="Amounts">
             <Field label="Currency" value={invoice.currency} />
             <Field label="Subtotal" value={invoice.subtotal} />
-            <Field label="Tax Rate" value={invoice.tax_rate != null ? `${(invoice.tax_rate * 100).toFixed(1)}%` : undefined} />
+            <Field label="Tax Rate" value={invoice.tax_rate != null ? `${(invoice.tax_rate * 100).toFixed(1)}%` : null} />
             <Field label="Tax Amount" value={invoice.tax_amount} />
-            <Field label="Total Amount" value={invoice.total_amount != null ? `${invoice.currency ?? ''} ${invoice.total_amount}` : undefined} />
-          </Section>
+            <Field label="Total Amount" value={invoice.total_amount != null ? `${invoice.currency} ${invoice.total_amount}` : null} bold />
+          </Card>
 
           {invoice.line_items && invoice.line_items.length > 0 && (
-            <Section title="Line Items">
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 font-semibold text-sm text-slate-700">
+                Line Items
+              </div>
+              <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    {['Description', 'Qty', 'Unit Price', 'Amount', 'Currency'].map((h) => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #ddd', fontWeight: 600 }}>
-                        {h}
-                      </th>
-                    ))}
+                  <tr className="text-left text-slate-500 border-b border-slate-100">
+                    <th className="px-4 py-2.5 font-medium">Description</th>
+                    <th className="px-4 py-2.5 font-medium">Qty</th>
+                    <th className="px-4 py-2.5 font-medium">Unit Price</th>
+                    <th className="px-4 py-2.5 font-medium">Amount</th>
+                    <th className="px-4 py-2.5 font-medium">Currency</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {invoice.line_items.map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px 12px' }}>{item.description ?? '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{item.quantity ?? '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{item.unit_price ?? '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{item.amount ?? '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{item.currency ?? '—'}</td>
+                <tbody className="divide-y divide-slate-100">
+                  {invoice.line_items.map((item, i) => (
+                    <tr key={i} className="hover:bg-slate-50">
+                      <td className="px-4 py-2.5 text-slate-700">{item.description ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{item.quantity ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{item.unit_price ?? '—'}</td>
+                      <td className="px-4 py-2.5 font-semibold text-slate-800">{item.amount ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{item.currency ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </Section>
+            </div>
           )}
 
           {invoice.raw_text && (
             <Collapsible title="Raw Extracted Text">
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: '#333', margin: 0 }}>{invoice.raw_text}</pre>
+              <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono leading-relaxed">{invoice.raw_text}</pre>
             </Collapsible>
           )}
 
           {invoice.metadata && Object.keys(invoice.metadata).length > 0 && (
-            <Collapsible title="Metadata (JSON)">
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: '#333', margin: 0 }}>
-                {JSON.stringify(invoice.metadata, null, 2)}
-              </pre>
+            <Collapsible title="Metadata (extra fields)">
+              <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono">{JSON.stringify(invoice.metadata, null, 2)}</pre>
             </Collapsible>
           )}
         </>
