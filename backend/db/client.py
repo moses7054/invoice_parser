@@ -9,8 +9,10 @@ import warnings
 
 supabase = None
 
-_url = os.getenv("SUPABASE_URL")
-_key = os.getenv("SUPABASE_KEY")
+_url = (os.getenv("SUPABASE_URL") or "").strip()
+# JWTs contain no whitespace, so strip ALL of it — env vars are often pasted
+# with stray newlines/spaces, which produce an "Illegal header value" error.
+_key = "".join((os.getenv("SUPABASE_KEY") or "").split())
 
 if _url and _key:
     try:
