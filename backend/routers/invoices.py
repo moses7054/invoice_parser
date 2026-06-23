@@ -46,17 +46,25 @@ def _mime_to_suffix(mime_type: str) -> str:
 
 
 def _extract_text(file_path: str) -> str:
-    """Extract plain text from a PDF or image file."""
+    """Extract text from a PDF or image. Falls back to reading the file as
+    plain text if the binary parser fails (e.g. the bundled text-based samples)."""
     path = Path(file_path)
     suffix = path.suffix.lower()
-    if suffix == ".pdf":
-        import pdfplumber
-        with pdfplumber.open(file_path) as pdf:
-            return "\n\n".join(page.extract_text() or "" for page in pdf.pages)
-    else:
-        from PIL import Image
-        import pytesseract
-        return pytesseract.image_to_string(Image.open(file_path))
+    try:
+        if suffix == ".pdf":
+            import pdfplumber
+            with pdfplumber.open(file_path) as pdf:
+                text = "\n\n".join(page.extract_text() or "" for page in pdf.pages)
+        else:
+            from PIL import Image
+            import pytesseract
+            text = pytesseract.image_to_string(Image.open(file_path))
+        if text.strip():
+            return text
+    except Exception:
+        pass
+    # Fallback: treat the file as UTF-8 text.
+    return Path(file_path).read_text(encoding="utf-8", errors="ignore")
 
 
 # Control chars (incl. NUL) are rejected by PostgreSQL and break the HTTP/2
