@@ -1,6 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap');
 @import "tailwindcss";
 
-* {
-  font-family: 'Inter', system-ui, sans-serif;
+* { font-family: 'Inter', system-ui, sans-serif; }
+
+body { @apply bg-slate-50 text-slate-900; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-border {
+  0%, 100% { border-color: rgb(99 102 241 / 0.4); }
+  50% { border-color: rgb(99 102 241 / 1); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+
+.animate-fade-up  { animation: fade-up 0.35s ease both; }
+.animate-spin     { animation: spin 0.75s linear infinite; }
+.drop-zone-active { animation: pulse-border 1.5s ease-in-out infinite; }
+
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-primary {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white
+         bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800
+         transition-all duration-150 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-700
+         bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300
+         transition-all duration-150 shadow-sm;
+}
+
+.card {
+  @apply bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden;
+}
+
+.card-header {
+  @apply bg-gradient-to-r from-slate-50 to-slate-100/60 border-b border-slate-200
+         px-5 py-3 text-sm font-semibold text-slate-700 flex items-center gap-2;
+}
+
+.field-row {
+  @apply flex gap-4 text-sm py-1.5;
+}
+
+.field-label {
+  @apply text-slate-400 w-44 shrink-0 font-medium;
+}
+
+.field-value {
+  @apply text-slate-800;
 }
