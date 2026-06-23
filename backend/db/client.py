@@ -17,6 +17,22 @@ if _url and _key:
         from supabase import create_client, Client  # type: ignore
 
         supabase: Client = create_client(_url, _key)
+
+        # Force HTTP/1.1 on the PostgREST session. Supabase's edge resets
+        # HTTP/2 streams from some hosts (e.g. Railway), which surfaces as
+        # httpx.RemoteProtocolError: StreamReset on every insert/select.
+        try:
+            import httpx  # type: ignore
+
+            _old = supabase.postgrest.session
+            supabase.postgrest.session = httpx.Client(
+                base_url=_old.base_url,
+                headers=_old.headers,
+                timeout=_old.timeout,
+                http2=False,
+            )
+        except Exception as exc:  # pragma: no cover
+            warnings.warn(f"Could not force HTTP/1.1 on PostgREST session: {exc}")
     except Exception as exc:  # pragma: no cover
         warnings.warn(f"Supabase client could not be initialised: {exc}")
 else:
