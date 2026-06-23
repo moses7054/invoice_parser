@@ -109,18 +109,24 @@ def _run_pipeline(file_path: str, llm_provider: str) -> JSONResponse:
         li_result = supabase.table("line_items").insert(item_record).execute()
         saved_line_items.append(li_result.data[0])
 
-    # Generate and store embeddings for semantic search
-    embedding_svc = EmbeddingService()
-    chunks = embedding_svc.chunk_text(raw_text)
-    embeddings = embedding_svc.embed_chunks(chunks, provider=llm_provider)
-    for chunk_text, embedding in zip(chunks, embeddings):
-        supabase.table("invoice_embeddings").insert(
-            {
-                "invoice_id": invoice_id,
-                "chunk_text": _sanitize(chunk_text),
-                "embedding": embedding,
-            }
-        ).execute()
+    # Generate and store embeddings for semantic search. Non-fatal: the invoice
+    # is already saved, so an embedding-provider failure (e.g. missing/invalid
+    # VOYAGE_API_KEY) must not fail the whole upload — only semantic Q&A degrades.
+    try:
+        embedding_svc = EmbeddingService()
+        chunks = embedding_svc.chunk_text(raw_text)
+        embeddings = embedding_svc.embed_chunks(chunks, provider=llm_provider)
+        for chunk_text, embedding in zip(chunks, embeddings):
+            supabase.table("invoice_embeddings").insert(
+                {
+                    "invoice_id": invoice_id,
+                    "chunk_text": _sanitize(chunk_text),
+                    "embedding": embedding,
+                }
+            ).execute()
+    except Exception as exc:
+        import logging
+        logging.warning("Embedding generation skipped for invoice %s: %s", invoice_id, exc)
 
     return JSONResponse(content={**saved_invoice, "line_items": saved_line_items})
 
