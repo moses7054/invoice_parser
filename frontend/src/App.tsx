@@ -6,8 +6,7 @@ import InvoiceListPage from './pages/InvoiceListPage'
 import InvoiceDetailPage from './pages/InvoiceDetailPage'
 import QAPage from './pages/QAPage'
 import { ProviderProvider, useProvider } from './context/ProviderContext'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { API_URL } from './api/config'
 
 const NAV = [
   { to: '/', label: 'Upload', icon: FileText },

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight, TrendingUp, FileText, DollarSign, Loader2 } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { API_URL } from '../api/config'
 
 interface InvoiceSummary {
   id: string

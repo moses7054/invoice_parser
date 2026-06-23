@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, Sparkles, FileText, Image, Zap, ArrowRight, Loader2 } from 'lucide-react'
 import { useProvider } from '../context/ProviderContext'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { API_URL } from '../api/config'
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
 const MAX_SIZE_BYTES = 10 * 1024 * 1024
 

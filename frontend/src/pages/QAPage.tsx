@@ -2,8 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Send, Database, Search, ExternalLink, Loader2, Bot, User } from 'lucide-react'
 import { useProvider } from '../context/ProviderContext'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { API_URL } from '../api/config'
 
 interface QAResponse { answer: string; mode: 'sql' | 'vector'; sources: string[] }
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Building2, Calendar, Receipt, List, Loader2 } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { API_URL } from '../api/config'
 
 interface LineItem {
   id?: string; description?: string; quantity?: number
