@@ -1,7 +1,9 @@
 fastapi
 uvicorn[standard]
 supabase
-docling
+pdfplumber
+Pillow
+pytesseract
 anthropic
 openai
 voyageai

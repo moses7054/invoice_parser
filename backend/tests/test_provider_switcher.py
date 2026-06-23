@@ -84,15 +84,11 @@ def _upload_with_provider(provider: str):
     fake_file = io.BytesIO(b"%PDF-1.4 fake pdf")
     fake_file.name = "test.pdf"
 
-    mock_convert_result = MagicMock()
-    mock_convert_result.document.export_to_markdown.return_value = "# Invoice\nTest content"
-
-    with patch("routers.invoices.DocumentConverter") as mock_dc, \
+    with patch("routers.invoices._extract_text", return_value="# Invoice\nTest content"), \
          patch("routers.invoices.LLMService") as mock_llm_cls, \
          patch("routers.invoices.EmbeddingService") as mock_emb_cls, \
          patch("routers.invoices.supabase", _make_supabase_mock(provider)):
 
-        mock_dc.return_value.convert.return_value = mock_convert_result
         mock_llm_cls.return_value.extract_invoice.return_value = dict(FIXTURE_INVOICE_DICT)
         mock_emb_cls.return_value.chunk_text.return_value = ["chunk"]
         mock_emb_cls.return_value.embed_chunks.return_value = [[0.1] * 1536]
